@@ -1,5 +1,5 @@
 # 前言
-Spring Boot 可以大幅减轻项目中各种繁杂的配置，这几天在国内外网站都没找到 IBM WebSphere MQ 与 Spring Boot JMS 集成的相关资料。因而在这篇，会详细讲述两者集成的方法。
+Spring Boot 可以大幅减轻项目中各种繁杂的配置，这几天在国内外网站都没找到 IBM WebSphere MQ 与 Spring Boot JMS 集成的相关资料。在这篇，会详细讲述两者集成的方法。
 # 准备
 - 开发工具 Intellij Idea + Maven
 在 idea 中开启 Spring Boot 插件，可以让我们很方便的生成 Spring Boot 项目
