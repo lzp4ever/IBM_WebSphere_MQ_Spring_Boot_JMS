@@ -24,7 +24,7 @@ Spring Boot 可以大幅减轻项目中各种繁杂的配置，这几天在国�
 mvn install:install-file -Dfile=[jar包所在路径] -DgroupId=com.ibm.mq -DartifactId=allclient -Dversion=1.0 -Dpackaging=jar
 ```
 
-配置项目的 maven 依赖文件，添加Spring Boot JMS
+配置项目的 maven 依赖文件，添加Spring Boot JMS，JAVAX JMS
 ```
 <!-- activemq 即是 Spring Boot JMS-->
 <dependency>
@@ -37,6 +37,12 @@ mvn install:install-file -Dfile=[jar包所在路径] -DgroupId=com.ibm.mq -Darti
     <groupId>com.ibm.mq</groupId>
     <artifactId>allclient</artifactId>
     <version>1.0</version>
+</dependency>
+
+<dependency>
+    <groupId>javax.jms</groupId>
+    <artifactId>javax.jms-api</artifactId>
+    <version>2.0.1</version>
 </dependency>
 ```
 ## 向 properties 文件添加 MQ 配置信息
