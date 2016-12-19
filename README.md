@@ -31,20 +31,23 @@ mvn install:install-file -Dfile=[jar path] -DgroupId=com.ibm.mq -DartifactId=all
 ## JavaConfig
 ### Configure MQ Rroperties and Read it in Project
 ```java
-@Value("${mq.queueManager}")
+@Value("${project.mq.queue-manager}")
 private String queueManager;
 
-@Value("${mq.channel}")
+@Value("${project.mq.channel}")
 private String channel;
 
-@Value("${mq.host}")
+@Value("${project.mq.host}")
 private String host;
 
-@Value("${mq.port}")
+@Value("${project.mq.port}")
 private Integer port;
 
-@Value("${mq.queue}")
+@Value("${project.mq.queue}")
 private String queue;
+
+@Value("${project.mq.receive-timeout}")
+private long receiveTimeout;
 ```
 ### Configure `MQBMConnectionFactory`
 ```java
