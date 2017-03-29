@@ -30,26 +30,43 @@ mvn install:install-file -Dfile=[jar path] -DgroupId=com.ibm.mq -DartifactId=all
 ```
 ## JavaConfig
 ### Configure MQ Rroperties and Read it in Project
+
+application.yml
+```yaml
+project: 
+  mq:
+    host: 192.168.1.180
+    port: 1416
+    queue-manager: QM
+    channel: mqm.SVRCONN   # SVRCONN
+    username: mqm
+    password: 123456
+    receive-timeout: 2000
+```
+
 ```java
-@Value("${project.mq.queue-manager}")
-private String queueManager;
-
-@Value("${project.mq.channel}")
-private String channel;
-
-@Value("${project.mq.host}")
-private String host;
-
-@Value("${project.mq.port}")
-private Integer port;
-
-@Value("${project.mq.queue}")
-private String queue;
-
-@Value("${project.mq.receive-timeout}")
-private long receiveTimeout;
+@Configuration
+public class JmsConfig {   
+    @Value("${project.mq.host}")
+    private String host;
+    @Value("${project.mq.port}")
+    private Integer port;
+    @Value("${project.mq.queue-manager}")
+    private String queueManager;
+    @Value("${project.mq.channel}")
+    private String channel;
+    @Value("${project.mq.username}")
+    private String username;
+    @Value("${project.mq.password}")
+    private String password;
+    @Value("${project.mq.receive-timeout}")
+    private long receiveTimeout;
+}
 ```
 ### Configure `MQBMConnectionFactory`
+
+**CCISD has to be the same within the Queue Manager, 1208 is UTF-8**
+
 ```java
 @Bean
 public MQQueueConnectionFactory mqQueueConnectionFactory() {
@@ -57,10 +74,9 @@ public MQQueueConnectionFactory mqQueueConnectionFactory() {
     mqQueueConnectionFactory.setHostName(host);
     try {
         mqQueueConnectionFactory.setTransportType(WMQConstants.WMQ_CM_CLIENT);
-        mqQueueConnectionFactory.setCCSID(1381);
+        mqQueueConnectionFactory.setCCSID(1208);
         mqQueueConnectionFactory.setChannel(channel);
         mqQueueConnectionFactory.setPort(port);
-        mqQueueConnectionFactory.setMsgBatchSize(10000);
         mqQueueConnectionFactory.setQueueManager(queueManager);
     } catch (Exception e) {
         e.printStackTrace();
@@ -68,15 +84,29 @@ public MQQueueConnectionFactory mqQueueConnectionFactory() {
     return mqQueueConnectionFactory;
 }
 ```
+
+### Config 'UserCredentialsConnectionFactoryAdapter'
+If you have to connect with Username and Password
+```java
+@Bean
+UserCredentialsConnectionFactoryAdapter userCredentialsConnectionFactoryAdapter(MQQueueConnectionFactory mqQueueConnectionFactory) {
+    UserCredentialsConnectionFactoryAdapter userCredentialsConnectionFactoryAdapter = new UserCredentialsConnectionFactoryAdapter();
+    userCredentialsConnectionFactoryAdapter.setUsername(username);
+    userCredentialsConnectionFactoryAdapter.setPassword(password);
+    userCredentialsConnectionFactoryAdapter.setTargetConnectionFactory(mqQueueConnectionFactory);
+    return userCredentialsConnectionFactoryAdapter;
+}
+```
+
 ### Configure `CachingConnectionFactory`
 Use `@Primary` annotation to tell Spring use this bean but not `MQQueueConnectionFactory`.
 ```java
 @Bean
 @Primary
-public CachingConnectionFactory cachingConnectionFactory(@Qualifier("mqQueueConnectionFactory") MQQueueConnectionFactory mqQueueConnectionFactory) {
+public CachingConnectionFactory cachingConnectionFactory(UserCredentialsConnectionFactoryAdapter userCredentialsConnectionFactoryAdapter) {
     CachingConnectionFactory cachingConnectionFactory = new CachingConnectionFactory();
-    cachingConnectionFactory.setTargetConnectionFactory(mqQueueConnectionFactory);
-    cachingConnectionFactory.setSessionCacheSize(10000);
+    cachingConnectionFactory.setTargetConnectionFactory(userCredentialsConnectionFactoryAdapter);
+    cachingConnectionFactory.setSessionCacheSize(500);
     cachingConnectionFactory.setReconnectOnException(true);
     return cachingConnectionFactory;
 }
@@ -85,24 +115,20 @@ public CachingConnectionFactory cachingConnectionFactory(@Qualifier("mqQueueConn
 If you use transaction
 ```java
 @Bean
-public JmsTransactionManager jmsTransactionManager(@Qualifier("cachingConnectionFactory") CachingConnectionFactory cachingConnectionFactory) {
+public PlatformTransactionManager jmsTransactionManager(CachingConnectionFactory cachingConnectionFactory) {
     JmsTransactionManager jmsTransactionManager = new JmsTransactionManager();
     jmsTransactionManager.setConnectionFactory(cachingConnectionFactory);
     return jmsTransactionManager;
 }
 ```
 ### Configure `JmsOperations`
+
+**Have to set Receive Timeout, or Receive Method would hang if queue is empty**
+
 ```java
 @Bean
-public JmsOperations jmsOperations(@Qualifier("cachingConnectionFactory") CachingConnectionFactory cachingConnectionFactory) {
+public JmsOperations jmsOperations(CachingConnectionFactory cachingConnectionFactory) {
     JmsTemplate jmsTemplate = new JmsTemplate(cachingConnectionFactory);
-    jmsTemplate.setSessionTransacted(true);
-    jmsTemplate.setDefaultDestinationName(queue);
-    jmsTemplate.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
-    jmsTemplate.setMessageIdEnabled(false);
-    jmsTemplate.setMessageTimestampEnabled(false);
-    jmsTemplate.setPubSubNoLocal(true);
-    jmsTemplate.setExplicitQosEnabled(true);
     jmsTemplate.setReceiveTimeout(receiveTimeout);
     return jmsTemplate;
 }
@@ -115,19 +141,28 @@ Now you can inject `jmsOperations` to operate IBM WebSphere MQ Simply.
 private JmsOperations jmsOperations;
 ```
 ### Send Message to MQ
+**If you wanna send and Receive Object, that object have to implement Serializable Interface. Also Setting the SerialID is Better**
 ```java
-public void send() {
-    jmsOperations.convertAndSend("Hello world");
+@Autowired
+JmsOperations jmsOperations;
+
+public void send(User user){
+  jmsOperations.convertAndSend("QUEUE.USER", user);
 }
 ```
 ### Receive Message to MQ
 ```java
-public void receive() {
-    String s = (String) jmsOperations.receiveAndConvert();
+@Autowired
+JmsOperations jmsOperations;
+public void receive(User user){
+  jmsOperations.receiveAndConvert("QUEUE.USER");
 }
 ```
 ## transaction Example
-Inject `JmsTransactionManager` to use transaction.
+2 way to use transaction
+1. Just put annotation `@EnableTransactionManagement` above the Main class, and put annotation `    @Transactional(value = "jmsTransactionManager")
+` above the Method.
+2. Inject `JmsTransactionManager` to use transaction.
 ```java
 @Autowired
 private JmsTransactionManager jmsTransactionManager;
