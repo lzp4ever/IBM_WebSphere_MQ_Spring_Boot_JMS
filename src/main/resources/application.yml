@@ -1,0 +1,9 @@
+project:
+  mq:
+    host: 192.168.1.180
+    port: 1416
+    queue-manager: QM
+    channel: mqm.SVRCONN   # SVRCONN
+    username: mqm
+    password: 123456
+    receive-timeout: 2000

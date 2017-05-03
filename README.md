@@ -158,32 +158,4 @@ public void receive(User user){
   jmsOperations.receiveAndConvert("QUEUE.USER");
 }
 ```
-## transaction Example
-2 way to use transaction
-1. Just put annotation `@EnableTransactionManagement` above the Main class, and put annotation `    @Transactional(value = "jmsTransactionManager")
-` above the Method.
-2. Inject `JmsTransactionManager` to use transaction.
-```java
-@Autowired
-private JmsTransactionManager jmsTransactionManager;
-```
-### Commit
-```java
-public void commit(){
-    TransactionStatus transactionStatus = jmsTransactionManager.getTransaction(new DefaultTransactionDefinition());
-    for (int i = 0; i < 2000; i++) {
-        jmsOperations.convertAndSend("hello world");
-    }
-    jmsTransactionManager.commit(transactionStatus);
-}
-```
-### Rollback
-```java
-public void rollback() {
-    TransactionStatus transactionStatus = jmsTransactionManager.getTransaction(new DefaultTransactionDefinition());
-    for (int i = 0; i < 2000; i++) {
-        jmsOperations.convertAndSend("hello world");
-    }
-    jmsTransactionManager.rollback(transactionStatus);
-}
-```
+
