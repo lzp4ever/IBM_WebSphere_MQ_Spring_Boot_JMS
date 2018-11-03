@@ -7,3 +7,4 @@ project:
     username: mqm
     password: 123456
     receive-timeout: 2000
+    queue: NAMEOFYOURQUEUE
